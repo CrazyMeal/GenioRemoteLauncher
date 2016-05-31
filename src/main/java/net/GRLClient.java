@@ -13,21 +13,15 @@ public class GRLClient {
     private NetDataWriter ndw;
 
     private Socket socket;
+    private String hostname;
+    private int port;
     private boolean alive;
     private boolean consoleMode;
 
 
     public GRLClient(String hostname, int port){
-        try {
-            this.socket = new Socket(hostname, port);
-
-            if(this.socket != null){
-                this.ndr = new NetDataReader(socket.getInputStream());
-                this.ndw = new NetDataWriter(socket.getOutputStream());
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        this.hostname = hostname;
+        this.port = port;
     }
 
     public void run(){
@@ -48,12 +42,42 @@ public class GRLClient {
                         System.out.println("Envoi d'un test");
                         this.sendTest();
                     }
+
+                    if(userInput.equals("Connect")){
+                        boolean connection_state = this.connect();
+                        System.out.println("Connected > " + connection_state);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
+    }
+
+    public boolean connect(){
+        boolean connectionSucceed = false;
+        try {
+            this.socket = new Socket(this.hostname, this.port);
+
+            this.ndw = new NetDataWriter(this.socket.getOutputStream());
+            this.ndr = new NetDataReader(this.socket.getInputStream());
+
+            this.ndw.writeDiscriminant(Protocol.CONNECT_REQUEST);
+            this.ndw.send();
+
+            if(this.ndr.readDiscriminant() == Protocol.OK){
+                connectionSucceed = true;
+            } else {
+                connectionSucceed = false;
+            }
+
+        } catch (IOException e) {
+            connectionSucceed = false;
+            e.printStackTrace();
+        }
+
+        return connectionSucceed;
     }
 
     public void sendTest() throws IOException {
