@@ -5,5 +5,5 @@ package model;
  */
 public final class GenioConstants {
 
-    public static String applicationName = "Genio Remote Launcher";
+    public static String applicationName = "Process Remote Launcher";
 }
