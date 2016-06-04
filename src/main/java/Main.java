@@ -1,4 +1,4 @@
-import net.GRLClient;
+import net.PRLClient;
 import net.Protocol;
 
 /**
@@ -10,7 +10,7 @@ public class Main {
         String hostname = "localhost";
 
         try {
-            GRLClient client = new GRLClient(hostname, Protocol.port);
+            PRLClient client = new PRLClient(hostname, Protocol.port);
             client.setConsoleMode(true);
             client.run();
         } catch (Exception e) {

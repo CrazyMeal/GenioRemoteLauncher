@@ -8,7 +8,7 @@ import java.net.Socket;
 /**
  * Created by KVN on 29/05/2016.
  */
-public class GRLClient {
+public class PRLClient {
     private NetDataReader ndr;
     private NetDataWriter ndw;
 
@@ -16,10 +16,11 @@ public class GRLClient {
     private String hostname;
     private int port;
     private boolean alive;
+    private boolean connectedToServer;
     private boolean consoleMode;
 
 
-    public GRLClient(String hostname, int port){
+    public PRLClient(String hostname, int port){
         this.hostname = hostname;
         this.port = port;
     }
@@ -44,8 +45,12 @@ public class GRLClient {
                     }
 
                     if(userInput.equals("Connect")){
-                        boolean connection_state = this.connect();
-                        System.out.println("Connected > " + connection_state);
+                        this.connectedToServer = this.connect();
+                        System.out.println("Connected > " + this.connectedToServer);
+                    }
+
+                    if(userInput.equals("List")){
+                        this.getInterfaceList();
                     }
                 }
             } catch (IOException e) {
@@ -81,8 +86,32 @@ public class GRLClient {
     }
 
     public void sendTest() throws IOException {
-        this.ndw.writeDiscriminant(Protocol.TEST);
-        this.ndw.send();
+        if(this.connectedToServer) {
+            this.ndw.writeDiscriminant(Protocol.TEST);
+            this.ndw.send();
+        }
+    }
+
+    public void getInterfaceList(){
+        if(this.connectedToServer) {
+            this.ndw.writeDiscriminant(Protocol.GET_INTERFACE_LIST);
+            try {
+                this.ndw.send();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                if (this.ndr.readDiscriminant() == Protocol.SERVER_SENDING_ITF_LIST) {
+                    int itfToReceive = this.ndr.readInt();
+                    for (int idx = 0; idx < itfToReceive; idx++) {
+                        System.out.println(this.ndr.readString());
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public void stop(){

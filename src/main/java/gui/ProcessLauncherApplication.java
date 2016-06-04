@@ -13,7 +13,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-public class GenioLauncherApplication extends Application {
+public class ProcessLauncherApplication extends Application {
 
     public static void main(String[] args) {
         launch(args);

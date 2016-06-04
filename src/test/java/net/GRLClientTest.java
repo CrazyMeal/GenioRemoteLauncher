@@ -12,7 +12,7 @@ public class GRLClientTest {
         String hostname = "localhost";
 
         try {
-            GRLClient client = new GRLClient(hostname, Protocol.port);
+            PRLClient client = new PRLClient(hostname, Protocol.port);
             client.run();
         } catch (Exception e) {
             e.printStackTrace();
