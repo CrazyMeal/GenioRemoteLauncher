@@ -16,7 +16,6 @@ public class PRLClient {
     private String hostname;
     private int port;
     private boolean alive;
-    private boolean connectedToServer;
     private boolean consoleMode;
 
 
@@ -35,22 +34,33 @@ public class PRLClient {
             String userInput = "";
             try {
                 while(this.alive && (userInput = stdIn.readLine()) != null){
-                    if(userInput.equals("Stop")){
+                    boolean instructionFound = false;
+                    if(!instructionFound && userInput.equals("Connect")){
+                        instructionFound = true;
+                        boolean connectedToServer = this.tryConnection();
+                        System.out.println("Attempt to connect succeeded > " + connectedToServer);
+                    }
+
+                    if(!instructionFound && userInput.equals("Stop")){
+                        instructionFound = true;
                         this.stop();
                     }
 
-                    if(userInput.equals("Test")){
+                    if(!instructionFound && userInput.equals("Test")){
+                        instructionFound = true;
                         System.out.println("Envoi d'un test");
                         this.sendTest();
                     }
 
-                    if(userInput.equals("Connect")){
-                        this.connectedToServer = this.connect();
-                        System.out.println("Connected > " + this.connectedToServer);
+
+
+                    if(!instructionFound && userInput.equals("List")){
+                        instructionFound = true;
+                        this.getInterfaceList();
                     }
 
-                    if(userInput.equals("List")){
-                        this.getInterfaceList();
+                    if(!instructionFound){
+                        System.out.println("Your command was not available");
                     }
                 }
             } catch (IOException e) {
@@ -60,13 +70,29 @@ public class PRLClient {
 
     }
 
-    public boolean connect(){
-        boolean connectionSucceed = false;
+    public void createSocketWithServer(){
         try {
-            this.socket = new Socket(this.hostname, this.port);
+            if(this.socket != null){
+                this.socket.close();
+                this.socket = null;
+            }
 
+            this.socket = new Socket(this.hostname, this.port);
             this.ndw = new NetDataWriter(this.socket.getOutputStream());
             this.ndr = new NetDataReader(this.socket.getInputStream());
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+    public boolean tryConnection(){
+        boolean connectionSucceed;
+        try {
+            this.createSocketWithServer();
 
             this.ndw.writeDiscriminant(Protocol.CONNECT_REQUEST);
             this.ndw.send();
@@ -82,44 +108,63 @@ public class PRLClient {
             e.printStackTrace();
         }
 
+        this.closeSocket();
+
         return connectionSucceed;
     }
 
     public void sendTest() throws IOException {
-        if(this.connectedToServer) {
-            this.ndw.writeDiscriminant(Protocol.TEST);
-            this.ndw.send();
-        }
+        this.createSocketWithServer();
+        this.ndw.writeDiscriminant(Protocol.TEST);
+        this.ndw.send();
+
+        this.closeSocket();
     }
 
     public void getInterfaceList(){
-        if(this.connectedToServer) {
-            this.ndw.writeDiscriminant(Protocol.GET_INTERFACE_LIST);
-            try {
-                this.ndw.send();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        this.createSocketWithServer();
 
-            try {
-                if (this.ndr.readDiscriminant() == Protocol.SERVER_SENDING_ITF_LIST) {
-                    int itfToReceive = this.ndr.readInt();
-                    for (int idx = 0; idx < itfToReceive; idx++) {
-                        System.out.println(this.ndr.readString());
-                    }
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        this.ndw.writeDiscriminant(Protocol.GET_INTERFACE_LIST);
+        try {
+            this.ndw.send();
+        } catch (IOException e) {
+            e.printStackTrace();
+            this.closeSocket();
+            return;
         }
+
+        try {
+            if( this.ndr.readDiscriminant() == Protocol.SERVER_SENDING_ITF_LIST ){
+                int qtyOfStringToRead = this.ndr.readInt();
+
+                for(int idx = 0 ; idx < qtyOfStringToRead ; idx++ ){
+                    System.out.print(this.ndr.readString());
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            this.closeSocket();
+            return;
+        }
+
+        this.closeSocket();
+
     }
 
     public void stop(){
         this.alive = false;
+        this.closeSocket();
     }
 
-    public boolean isConsoleMode() {
-        return consoleMode;
+    private void closeSocket(){
+        if(this.socket != null){
+            try {
+                this.socket.close();
+                this.socket = null;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public void setConsoleMode(boolean consoleMode) {
